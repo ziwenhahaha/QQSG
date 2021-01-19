@@ -125,3 +125,141 @@
 这篇本文里面，也附有python3的代码，有兴趣可以自己跑一下。
 
 ![PKG包解析](README.assets/PKG%E5%8C%85%E8%A7%A3%E6%9E%90.png)
+
+
+
+**解包代码 **
+
+``` python
+# -*- coding: utf-8 -*-
+import os, struct, zlib
+def decode(pkgfilename,outdirname):
+    pkgfile = open(pkgfilename, 'rb')
+    pkgfile.read(4)
+    filenums, = struct.unpack('I', pkgfile.read(4))
+    filename_table_offset, = struct.unpack('I', pkgfile.read(4))
+    filename_table_len, = struct.unpack('I', pkgfile.read(4))
+    pkgfile.seek(filename_table_offset)
+    for index in range(filenums):
+        name_len, = struct.unpack('H', pkgfile.read(2))
+        name = pkgfile.read(name_len)
+        pkgfile.read(4)
+        offset, = struct.unpack('I', pkgfile.read(4))
+        size, = struct.unpack('I', pkgfile.read(4))
+        zlib_size, = struct.unpack('I', pkgfile.read(4))
+        current_pos = pkgfile.tell()
+        pkgfile.seek(offset)
+        text = pkgfile.read(zlib_size)
+        text = zlib.decompress(text)
+        pkgfile.seek(current_pos)
+        # outfilename = os.path.join(outdirname, os.path.join(os.path.splitext(os.path.basename(pkgfilename))[0],
+        #                                                     str(name, encoding="utf-8")))
+        outfilename = os.path.join(outdirname, os.path.join(os.path.splitext(os.path.basename(pkgfilename))[0],
+                                                                            str(name, encoding="gbk")))
+        # print(u'进度 [%d/%d]: ' % (index + 1, filenums),
+        #       os.path.join(os.path.splitext(os.path.basename(pkgfilename))[0], str(name, encoding="utf-8")))
+        print(u'进度 [%d/%d]: ' % (index + 1, filenums),
+              os.path.join(os.path.splitext(os.path.basename(pkgfilename))[0], str(name, encoding="gbk")))
+        if not os.path.exists(os.path.dirname(outfilename)):
+            os.makedirs(os.path.dirname(outfilename))
+        open(outfilename, 'wb').write(text)
+
+if __name__ == "__main__":
+    pkgfilename = r"F:\QQSG\GameData_Pre\objects.pkg"
+    outdirname = r"F:\QQSG\GameData_Modify\objects1"
+    decode(pkgfilename,outdirname)
+
+    # pkgfilename = r"F:\QQSG\GameData_Pre\objects2.pkg"
+    # outdirname = r"F:\QQSG\GameData_Modify\objects2"
+    # decode(pkgfilename,outdirname)
+    #
+    # pkgfilename = r"F:\QQSG\GameData_Pre\objects3.pkg"
+    # outdirname = r"F:\QQSG\GameData_Modify\objects3"
+    # decode(pkgfilename,outdirname)
+    #
+    # pkgfilename = r"F:\QQSG\GameData_Pre\objects4.pkg"
+    # outdirname = r"F:\QQSG\GameData_Modify\objects4"
+    # decode(pkgfilename,outdirname)
+```
+
+**打包代码**
+
+```
+import zlib, os, struct
+
+filelist = []
+
+class FileVisitor:
+    def __init__(self, startDir=os.curdir):
+        self.startDir = startDir
+    def run(self):
+        for dirname, subdirnames, filenames in os.walk(self.startDir, True):
+            for filename in filenames:
+                self.visit_file(os.path.join(dirname, filename))
+    def visit_file(self, pathname):
+        filelist.append({'filename':pathname, 'size':0, 'zlib_size':0, 'offset':0, 'relative_filename': pathname.replace(os.path.normpath(self.startDir)+os.sep, '')})
+
+def recode(source_dirname,out_filename):
+    FileVisitor(source_dirname).run()
+    total = len(filelist)
+    fp = open(out_filename + '~', 'wb')
+    fp.write('\x64\x00\x00\x00'.encode())
+    fp.write(struct.pack('I', len(filelist)))
+    fp.write(struct.pack('I', 0))
+    fp.write(struct.pack('I', 0))
+    offset = 16
+    for index in range(total):
+        item = filelist[index]
+        item['offset'] = offset
+        infile = open(item['filename'], 'rb')
+        text = infile.read()
+        infile.close()
+        item['size'] = len(text)
+        text = zlib.compress(text)
+        item['zlib_size'] = len(text)
+        fp.write(text)
+        offset += item['zlib_size']
+        print(u'已压缩文件 %d/%d' % (index + 1, total))
+    filename_table_offset = offset
+    for index in range(total):
+        item = filelist[index]
+        fp.write(struct.pack('H', len(item['relative_filename'])))
+        fp.write(item['relative_filename'].encode())
+        fp.write('\x01\x00\x00\x00'.encode())
+        fp.write(struct.pack('I', item['offset']))
+        fp.write(struct.pack('I', item['size']))
+        fp.write(struct.pack('I', item['zlib_size']))
+        offset += 2 + len(item['relative_filename']) + 16
+        print(u'已输出路径 %d/%d' % (index+1, total))
+    filename_table_len = offset - filename_table_offset
+    fp.close()
+
+    fp = open(out_filename + '~', 'rb')
+    ret = open(out_filename, 'wb')
+
+    fp.read(16)
+    ret.write('\x64\x00\x00\x00'.encode())
+    ret.write(struct.pack('I', len(filelist)))
+    ret.write(struct.pack('I', filename_table_offset))
+    ret.write(struct.pack('I', filename_table_len))
+
+    copy_bytes = 16
+    total_bytes = offset
+    while True:
+        text = fp.read(2**20)
+        ret.write(text)
+        copy_bytes += len(text)
+        print(u'最后的拷贝 %d%%' % (copy_bytes * 100.0 / total_bytes))
+        if not text:
+            break
+    fp.close()
+    ret.close()
+    os.remove(out_filename + '~')
+
+if __name__ == "__main__":
+
+
+    source_dirname = r"F:\QQSG\GameData_Modify\objects1\objects"
+    out_filename = r"F:\QQSG\GameData_Recoding\objdects.pkg"
+    recode()
+```
