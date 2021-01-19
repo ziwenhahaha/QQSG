@@ -263,3 +263,66 @@ if __name__ == "__main__":
     out_filename = r"F:\QQSG\GameData_Recoding\objdects.pkg"
     recode()
 ```
+
+
+
+使用该源码对下面路径下面的 objects.pkg  objects2.pkg  objects3.pkg  objects4.pkg  进行解包
+
+![image-20210120035601674](README.assets/image-20210120035601674.png)
+
+
+
+注意解包之前一定要做好备份，否则游戏崩溃了，又得重新下载了。
+
+
+
+**Objects.pkg 的解包 **
+
+![image-20210120040231794](README.assets/image-20210120040231794.png)
+
+在根目录下面存放有四个文件夹：见明知意：magic存放特效，map存放地图，protocol存放协议（这只是笼统翻译，具体得看内部是啥），res存放resource资源
+
+
+
+进入Objects/magic文件夹：
+
+![image-20210120040504494](README.assets/image-20210120040504494.png)
+
+进入Objects/magic/image 文件夹
+
+![image-20210120040525474](README.assets/image-20210120040525474.png)
+
+进入Objects/magic/skill文件夹
+
+![image-20210120040700775](README.assets/image-20210120040700775.png)
+
+
+
+可以看到 objects包里面的 magic内容大多是以sk3，ef3为结尾的东西，除了拼音的文件名，几乎获取不到其他特别有用的信息。
+
+
+
+然后看objects包里面的map。 震撼我妈一整年，里面存的就是MAP文件和SRV文件，如果我没猜错的话对应背景图以及这个背景图里面的能站人能攀爬的数据。 黑屏如无意外就是从这些文件开始入手了。
+
+![image-20210120041622349](README.assets/image-20210120041622349.png)
+
+
+
+在转到下一个包之前，我们继续逛逛：protocol文件夹里面只有一个bin文件，不清楚是什么用。
+
+res文件夹是真的大头。里面几乎涵盖了整个三国的内容。
+
+![image-20210120042604537](README.assets/image-20210120042604537.png)
+
+瞧我发现了啥，这应该就是任务信息了。
+
+![image-20210120043317889](README.assets/image-20210120043317889.png)
+
+![image-20210120043406733](README.assets/image-20210120043406733.png)
+
+
+
+最后，就是黑屏问答的关键了，将对应文件进行修改，就可以黑屏时只显示答案了，只可惜有些问答被加密了，不过根据其余的文本消息大概可以知道，未来似乎要追加题库了，估计是要制裁一下脚本了？：
+
+![image-20210120044047493](README.assets/image-20210120044047493.png)
+
